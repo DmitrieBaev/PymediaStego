@@ -18,7 +18,7 @@ from help import Ui_HelpWindow
 
 # GLOBALS
 DEGREE = -1
-FRAME = -1  # SPIN_N
+FRAME_START = -1  # SPIN_N
 FRAME_COUNT = -1  # SPIN_I
 OUTPUT_DIR = ""
 OWNER = ""
@@ -30,11 +30,23 @@ class MainWndProc(QtWidgets.QMainWindow):
         super(MainWndProc, self).__init__()  # Наследуем инициализацию окна от прородителя QtWidgets
         self.ui = Ui_MainWindow()  # Создаем объект класса, описывающего интерфейс
         self.ui.setupUi(self)  # Позиционируем все элементы интерфейса
+        self.load_properties()  # Загружаем последнюю сохраненную конфигурацию приложения
         # Обработчики кнопок
         self.ui.btn_settings.clicked.connect(self.show_settings)
         self.ui.btn_help.clicked.connect(self.show_help)
         self.ui.btn_enc.clicked.connect(self.encode)
         self.ui.btn_dec.clicked.connect(self.decode)
+
+    @staticmethod
+    def load_properties():
+        global DEGREE, FRAME_START, FRAME_COUNT, OUTPUT_DIR, OWNER
+        config = configparser.RawConfigParser()
+        config.read("resources\conf\properties.ini")
+        DEGREE = config.getint("SETTINGS", "degree_value")
+        FRAME_START = config.getint("SETTINGS", "frame_start")
+        FRAME_COUNT = config.getint("SETTINGS", "frame_count")
+        OUTPUT_DIR = config.get("SETTINGS", "output_dir")
+        OWNER = config.get("GLOBALS", "owner")
 
     def debug(self, msg):
         QtWidgets.QMessageBox.warning(self, "Debug message", msg, QtWidgets.QMessageBox.Ok)
