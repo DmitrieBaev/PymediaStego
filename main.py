@@ -17,7 +17,9 @@ from mainframe import Ui_MainWindow
 from settings import Ui_SettingsWindow
 #from inputdlg import Ui_InDialogWindow
 from help import Ui_HelpWindow
-import modules.aes as SyncEncr, modules.rsa as ASyncEncr, modules.stego as Steganography, modules.win32 as FileInfo
+import modules.stego as Steganography, modules.win32 as FileInfo
+from modules.aes import Encryptor as SyncEncr
+from modules.rsa import Encryptor as ASyncEncr
 
 # Глобальные переменные
 import resources.var.globals
@@ -61,34 +63,54 @@ class MainWndProc(QtWidgets.QMainWindow):
 
     @staticmethod
     def fill_copyright(path):
-        global COPYRIGHT, DATE_CREATE, DATE_MODIFY, OWNER
+        global COPYRIGHT, DATE_CREATE, DATE_MODIFY, OWNER, NAME
         DATE_CREATE = time.strftime("%d.%m.%Y %H:%M", time.localtime(os.path.getctime(path)))
         DATE_MODIFY = time.strftime("%d.%m.%Y %H:%M", time.localtime(os.path.getmtime(path)))
         OWNER = FileInfo.get_file_info(path, 'short')
+        NAME = os.path.basename(path)
 
-        COPYRIGHT = f'Copyright: © {os.path.basename(path)},\n{DATE_CREATE}, {OWNER}\nAll Rights Reserved.'
+        COPYRIGHT = f'Copyright: © {NAME},\n{DATE_CREATE}, {OWNER}\nAll Rights Reserved.'
         return COPYRIGHT
 
     def encode(self):
         if self.ui.path_input.text() == '':
             QtWidgets.QMessageBox.warning(self, 'Ошибка!', 'Невозможно выполнить процесс защиты файла авторским правом - не выбран видео файл', QtWidgets.QMessageBox.Ok)
             return 0
-        global OUTPUT_DIR
+        global OUTPUT_DIR, NAME, COPYRIGHT, DATE_CREATE
         self.loading('Выполнение процесса шифрования копирайта')
+        # Ключ симметричного алгоритма шифрования
+        key = '2yDynDCk5Njsvq2m'.encode()  # 16 байт - длина ключа в байтах
+        copyright_byte = COPYRIGHT.encode()
+        AES = SyncEncr(key)
+        copyright_encrypted = AES.encrypt(copyright_byte)
+        copyright_decrypted = AES.decrypt(copyright_encrypted)
+        open(os.path.realpath(f'{OUTPUT_DIR}/tmp/{NAME}.AES.enc'), 'wb').write(copyright_encrypted)
+        open(os.path.realpath(f'{OUTPUT_DIR}/tmp/{NAME}.AES.dec'), 'wb').write(copyright_decrypted)
+
         self.loading('Получение ЭЦП')
+        RSA = ASyncEncr()
+        signature = RSA.encrypt(DATE_CREATE.encode())
+        correct = RSA.decrypt(DATE_CREATE.encode(), signature)
+        print(f'ЭЦП корректна? {correct}')
+
         self.loading('Сохранение ключей ЭЦП')
+
         self.loading('Подготавка видео файла')
+
         self.loading('Выполнение процесса стеганографии')
-        self.loading('')
+
+        # self.loading('')
         webbrowser.open(os.path.realpath(OUTPUT_DIR))  # открываем папку в проводнике
         # os.system(f'start {os.path.realpath(self.ui.tb_out_folder.text())}')  # альтернатива
 
     def decode(self):
         pass
 
-    def loading(self, msg):
-        self.ui.lbl_progress.setText(f'<p style="color: rgb(250, 55, 55);">{msg}</p>')
-        time.sleep(1)
+    def loading(self, msg, object='btn'):
+        if object == 'lbl':
+            self.ui.lbl_progress.setText(f'<p style="color: rgb(250, 55, 55);">{msg}</p>')
+        else:
+            self.ui.btn_enc.setText('Обработка')
 
 
 class HelpWndProc(QtWidgets.QMainWindow):

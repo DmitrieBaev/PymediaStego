@@ -2,7 +2,10 @@ DEGREE = -1
 FRAME_START = -1  # SPIN_N
 FRAME_COUNT = -1  # SPIN_I
 OUTPUT_DIR = ""
-OWNER = ""
+
 COPYRIGHT = ""
+
+OWNER = ""
+NAME = ""
 DATE_CREATE = ""
 DATE_MODIFY = ""
