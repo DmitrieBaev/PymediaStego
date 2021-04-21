@@ -2,7 +2,7 @@
 # python -m PyQt5.uic.pyuic -x ui\diploma.ui -o ui\frame.py
 
 # Системные библиотеки
-import configparser, sys, os, webbrowser
+import configparser, sys, os, webbrowser, time
 
 # Сторонние библиотеки
 # pip install hurry.filesize
@@ -10,10 +10,12 @@ from hurry.filesize import size  # Конвертор размеров файл�
 # pip install pyqt5
 from PyQt5 import QtWidgets
 
+# Локальные модули
 from mainframe import Ui_MainWindow
 from settings import Ui_SettingsWindow
 from inputdlg import Ui_InDialogWindow
 from help import Ui_HelpWindow
+import modules.aes, modules.rsa, modules.stego, modules.win32 as FileInfo
 
 
 # GLOBALS
@@ -22,6 +24,9 @@ FRAME_START = -1  # SPIN_N
 FRAME_COUNT = -1  # SPIN_I
 OUTPUT_DIR = ""
 OWNER = ""
+COPYRIGHT = ""
+DATE_CREATE = ""
+DATE_MODIFY = ""
 
 
 class MainWndProc(QtWidgets.QMainWindow):
@@ -30,54 +35,54 @@ class MainWndProc(QtWidgets.QMainWindow):
         super(MainWndProc, self).__init__()  # Наследуем инициализацию окна от прородителя QtWidgets
         self.ui = Ui_MainWindow()  # Создаем объект класса, описывающего интерфейс
         self.ui.setupUi(self)  # Позиционируем все элементы интерфейса
-        self.load_properties()  # Загружаем последнюю сохраненную конфигурацию приложения
+        self.load_properties()
         # Обработчики кнопок
         self.ui.btn_settings.clicked.connect(self.show_settings)
         self.ui.btn_help.clicked.connect(self.show_help)
+        self.ui.btn_choose.clicked.connect(self.choose_carrier)
         self.ui.btn_enc.clicked.connect(self.encode)
         self.ui.btn_dec.clicked.connect(self.decode)
 
     @staticmethod
     def load_properties():
-        global DEGREE, FRAME_START, FRAME_COUNT, OUTPUT_DIR, OWNER
+        global DEGREE, FRAME_START, FRAME_COUNT, OUTPUT_DIR
         config = configparser.RawConfigParser()
         config.read("resources\conf\properties.ini")
         DEGREE = config.getint("SETTINGS", "degree_value")
         FRAME_START = config.getint("SETTINGS", "frame_start")
         FRAME_COUNT = config.getint("SETTINGS", "frame_count")
         OUTPUT_DIR = config.get("SETTINGS", "output_dir")
-        OWNER = config.get("GLOBALS", "owner")
-
-    def debug(self, msg):
-        QtWidgets.QMessageBox.warning(self, "Debug message", msg, QtWidgets.QMessageBox.Ok)
 
     def show_settings(self):
         self.next = SettingsWndProc()
-        # settings = SettingsWndProc()
-        # settings.show()
 
     def show_help(self):
         self.next = HelpWndProc()
 
-    # def choose_carrier(self):
-    #     fileName, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Выберите видео файл", "", "TEST!!! (*.png)", options=QtWidgets.QFileDialog.Options())
-    #     if fileName:
-    #         self.ui.tb_carrier.setText(fileName)
-    #         self.ui.lbl_free_space.setText(f'UNKNOWN/{size(os.path.getsize(fileName))}')
+    def choose_carrier(self):
+        fileName, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Выберите видео файл", "", "TEST!!! (*.*)", options=QtWidgets.QFileDialog.Options())
+        if fileName:
+            self.ui.path_input.setText(fileName)
+            self.ui.copyright.setPlainText(self.fill_copyright(fileName))
 
-    # def choose_folder(self):
-    #     dirName = QtWidgets.QFileDialog.getExistingDirectory(self, "Укажите папку")
-    #     if dirName:
-    #         self.ui.tb_out_folder.setText(dirName)
+    @staticmethod
+    def fill_copyright(path):
+        global COPYRIGHT, DATE_CREATE, DATE_MODIFY, OWNER
+        DATE_CREATE = time.strftime("%d.%m.%Y %H:%M", time.localtime(os.path.getctime(path)))
+        DATE_MODIFY = time.strftime("%d.%m.%Y %H:%M", time.localtime(os.path.getmtime(path)))
+        OWNER = FileInfo.get_file_info(path, 'short')
+
+        COPYRIGHT = f'Copyright: © {os.path.basename(path)},\n{DATE_CREATE}, {OWNER}\nAll Rights Reserved.'
+        return COPYRIGHT
 
     def encode(self):
-        self.debug('Корректно ;)')
+        pass
         # print(self.ui.tb_out_folder.text())
         # webbrowser.open(os.path.realpath(self.ui.tb_out_folder.text()))  # открываем папку в проводнике
         # os.system(f'start {os.path.realpath(self.ui.tb_out_folder.text())}')  # альтернатива
 
     def decode(self):
-        self.debug('Корректно ;)')
+        pass
 
 
 class HelpWndProc(QtWidgets.QMainWindow):
