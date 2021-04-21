@@ -2,7 +2,7 @@
 # python -m PyQt5.uic.pyuic -x ui\diploma.ui -o ui\frame.py
 
 # Системные библиотеки
-import sys, os, webbrowser
+import configparser, sys, os, webbrowser
 
 # Сторонние библиотеки
 # pip install hurry.filesize
@@ -14,6 +14,14 @@ from mainframe import Ui_MainWindow
 from settings import Ui_SettingsWindow
 from inputdlg import Ui_InDialogWindow
 from help import Ui_HelpWindow
+
+
+# GLOBALS
+DEGREE = -1
+FRAME = -1  # SPIN_N
+FRAME_COUNT = -1  # SPIN_I
+OUTPUT_DIR = ""
+OWNER = ""
 
 
 class MainWndProc(QtWidgets.QMainWindow):
@@ -75,16 +83,55 @@ class SettingsWndProc(QtWidgets.QMainWindow):
         super(SettingsWndProc, self).__init__()  # Наследуем инициализацию окна от прородителя QtWidgets
         self.ui = Ui_SettingsWindow()  # Создаем объект класса, описывающего интерфейс
         self.ui.setupUi(self)  # Позиционируем все элементы интерфейса
-        self.show()
+        self.show()  # Отобразить форму настроек
+        self.config = configparser.RawConfigParser()  # Объект файла конфигурации
+        self.config.read("resources\conf\properties.ini")
+        self.load_properties()  # Подготовить последние сохраненные настройки приложения
         # Обработчики кнопок
-        self.ui.btn_OK.clicked.connect(self.save_changes)
-        self.ui.btn_cancel.clicked.connect(self.undo_changes)
+        self.ui.btn_OK.clicked.connect(self.save_changes)  # Применение настроек
+        self.ui.btn_cancel.clicked.connect(self.undo_changes)  # Откат настроек
+        self.ui.btn_choose.clicked.connect(self.out_dir)
+
+    def load_properties(self):
+        self.ui.path_output.setText(self.config.get("SETTINGS", "output_dir"))
+        degree_name = self.config.get("SETTINGS", "degree_name")
+        if degree_name == "Worth":  self.ui.radio1.setChecked(True)
+        elif degree_name == "Low":  self.ui.radio2.setChecked(True)
+        elif degree_name == "Mid":  self.ui.radio3.setChecked(True)
+        elif degree_name == "High": self.ui.radio4.setChecked(True)
+        else: self.ui.radio2.setChecked(True)
+        self.ui.spin_N.setProperty("value", self.config.getint("SETTINGS", "frame_start"))
+        self.ui.spin_I.setProperty("value", self.config.getint("SETTINGS", "Frame_count"))
 
     def save_changes(self):
+        self.config.set("SETTINGS", "output_dir", self.ui.path_output.text())
+        degree_name, degree_value = "Low", 4
+        if self.ui.radio1.isChecked():
+            degree_name = "Worth"
+            degree_value = 8
+        if self.ui.radio2.isChecked():
+            degree_name = "Low"
+            degree_value = 4
+        if self.ui.radio3.isChecked():
+            degree_name = "Mid"
+            degree_value = 2
+        if self.ui.radio4.isChecked():
+            degree_name = "High"
+            degree_value = 1
+        self.config.set("SETTINGS", "degree_name", degree_name)
+        self.config.set("SETTINGS", "degree_value", degree_value)
+        self.config.set("SETTINGS", "frame_start", self.ui.spin_N.value())
+        self.config.set("SETTINGS", "frame_count", self.ui.spin_I.value())
+        self.config.write(open("resources\conf\properties.ini", "w"))
         self.close()
 
     def undo_changes(self):
         self.close()
+
+    def out_dir(self):
+        dirName = QtWidgets.QFileDialog.getExistingDirectory(self, "Укажите папку для сохранения результата")
+        if dirName:
+            self.ui.path_output.setText(dirName)
 
 
 class InputDialogProc(QtWidgets.QMainWindow):
