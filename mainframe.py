@@ -57,6 +57,13 @@ class Ui_MainWindow(object):
         self.btn_help.setIcon(icon1)
         self.btn_help.setFlat(True)
         self.btn_help.setObjectName("btn_help")
+        font = QtGui.QFont()
+        font.setItalic(True)
+        self.lbl_progress = QtWidgets.QLabel(self.centralwidget)
+        self.lbl_progress.setGeometry(QtCore.QRect(10, 10, 261, 23))
+        self.lbl_progress.setFont(font)
+        self.lbl_progress.setText("")
+        self.lbl_progress.setObjectName("lbl_progress")
         MainWindow.setCentralWidget(self.centralwidget)
 
         self.retranslateUi(MainWindow)

@@ -3,6 +3,8 @@
 
 # Системные библиотеки
 import configparser, sys, os, webbrowser, time
+from multiprocessing import Process
+from threading import Thread
 
 # Сторонние библиотеки
 # pip install hurry.filesize
@@ -15,7 +17,8 @@ from mainframe import Ui_MainWindow
 from settings import Ui_SettingsWindow
 #from inputdlg import Ui_InDialogWindow
 from help import Ui_HelpWindow
-import modules.aes, modules.rsa, modules.stego, modules.win32 as FileInfo
+import modules.aes as SyncEncr, modules.rsa as ASyncEncr, modules.stego as Steganography, modules.win32 as FileInfo
+
 # Глобальные переменные
 import resources.var.globals
 
@@ -67,13 +70,25 @@ class MainWndProc(QtWidgets.QMainWindow):
         return COPYRIGHT
 
     def encode(self):
-        pass
-        # print(self.ui.tb_out_folder.text())
-        # webbrowser.open(os.path.realpath(self.ui.tb_out_folder.text()))  # открываем папку в проводнике
+        if self.ui.path_input.text() == '':
+            QtWidgets.QMessageBox.warning(self, 'Ошибка!', 'Невозможно выполнить процесс защиты файла авторским правом - не выбран видео файл', QtWidgets.QMessageBox.Ok)
+            return 0
+        global OUTPUT_DIR
+        self.loading('Выполнение процесса шифрования копирайта')
+        self.loading('Получение ЭЦП')
+        self.loading('Сохранение ключей ЭЦП')
+        self.loading('Подготавка видео файла')
+        self.loading('Выполнение процесса стеганографии')
+        self.loading('')
+        webbrowser.open(os.path.realpath(OUTPUT_DIR))  # открываем папку в проводнике
         # os.system(f'start {os.path.realpath(self.ui.tb_out_folder.text())}')  # альтернатива
 
     def decode(self):
         pass
+
+    def loading(self, msg):
+        self.ui.lbl_progress.setText(f'<p style="color: rgb(250, 55, 55);">{msg}</p>')
+        time.sleep(1)
 
 
 class HelpWndProc(QtWidgets.QMainWindow):
