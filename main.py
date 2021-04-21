@@ -16,7 +16,7 @@ from settings import Ui_SettingsWindow
 from inputdlg import Ui_InDialogWindow
 from help import Ui_HelpWindow
 import modules.aes, modules.rsa, modules.stego, modules.win32 as FileInfo
-# GLOBALS
+# Глобальные переменные
 import resources.var.globals
 
 
