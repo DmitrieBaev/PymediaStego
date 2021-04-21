@@ -13,7 +13,7 @@ from PyQt5 import QtWidgets
 # Локальные модули
 from mainframe import Ui_MainWindow
 from settings import Ui_SettingsWindow
-from inputdlg import Ui_InDialogWindow
+#from inputdlg import Ui_InDialogWindow
 from help import Ui_HelpWindow
 import modules.aes, modules.rsa, modules.stego, modules.win32 as FileInfo
 # Глобальные переменные
@@ -142,18 +142,18 @@ class SettingsWndProc(QtWidgets.QMainWindow):
             self.ui.path_output.setText(dirName)
 
 
-class InputDialogProc(QtWidgets.QMainWindow):
-    def __init__(self):
-        # Подключение окна
-        super(InputDialogProc, self).__init__()  # Наследуем инициализацию окна от прородителя QtWidgets
-        self.ui = Ui_InDialogWindow()  # Создаем объект класса, описывающего интерфейс
-        self.ui.setupUi(self)  # Позиционируем все элементы интерфейса
-        self.show()
-        # Обработчики кнопок
-        self.ui.btn_OK.clicked.connect(self.save_changes)
-
-    def save_changes(self):
-        self.close()
+# class InputDialogProc(QtWidgets.QMainWindow):
+#     def __init__(self):
+#         # Подключение окна
+#         super(InputDialogProc, self).__init__()  # Наследуем инициализацию окна от прородителя QtWidgets
+#         self.ui = Ui_InDialogWindow()  # Создаем объект класса, описывающего интерфейс
+#         self.ui.setupUi(self)  # Позиционируем все элементы интерфейса
+#         self.show()
+#         # Обработчики кнопок
+#         self.ui.btn_OK.clicked.connect(self.save_changes)
+#
+#     def save_changes(self):
+#         self.close()
 
 
 if __name__ == '__main__':
