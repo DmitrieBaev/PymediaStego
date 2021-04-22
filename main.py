@@ -3,26 +3,22 @@
 
 # Системные библиотеки
 import configparser, sys, os, webbrowser, time
-from multiprocessing import Process
-from threading import Thread
 
 # Сторонние библиотеки
 # pip install hurry.filesize
-from hurry.filesize import size  # Конвертор размеров файлов
 # pip install pyqt5
-from PyQt5 import QtWidgets, QtGui
+from PyQt5 import QtWidgets
 
 # Локальные модули
-from ui_main import Ui_MainWindow
-from ui_settings import Ui_SettingsWindow
+from resources.visual.ui_main import Ui_MainWindow
+from resources.visual.ui_settings import Ui_SettingsWindow
 #from inputdlg import Ui_InDialogWindow
-from ui_help import Ui_HelpWindow
-import modules.stego as Steganography, modules.win32 as FileInfo
+from resources.visual.ui_help import Ui_HelpWindow
+import modules.win32 as FileInfo
 from modules.aes import Encryptor as SyncEncr
 from modules.rsa import Encryptor as ASyncEncr
 
 # Глобальные переменные
-import resources.var.globals
 
 
 class MainWndProc(QtWidgets.QMainWindow):
@@ -55,7 +51,7 @@ class MainWndProc(QtWidgets.QMainWindow):
     def load_properties():
         global DEGREE, FRAME_START, FRAME_COUNT, OUTPUT_DIR
         config = configparser.RawConfigParser()
-        config.read("resources/conf/properties.ini")
+        config.read("resources/conf/config.ini")
         DEGREE = config.getint("SETTINGS", "degree_value")
         FRAME_START = config.getint("SETTINGS", "frame_start")
         FRAME_COUNT = config.getint("SETTINGS", "frame_count")
@@ -149,7 +145,7 @@ class SettingsWndProc(QtWidgets.QMainWindow):
         self.ui.setupUi(self)  # Позиционируем все элементы интерфейса
         self.show()  # Отобразить форму настроек
         self.config = configparser.RawConfigParser()  # Объект файла конфигурации
-        self.config.read("resources/conf/properties.ini")
+        self.config.read("resources/conf/config.ini")
         self.load_properties()  # Подготовить последние сохраненные настройки приложения
         # Обработчики кнопок
         self.ui.btn_OK.clicked.connect(self.save_changes)  # Применение настроек
@@ -186,7 +182,7 @@ class SettingsWndProc(QtWidgets.QMainWindow):
         self.config.set("SETTINGS", "degree_value", degree_value)
         self.config.set("SETTINGS", "frame_start", self.ui.spin_N.value())
         self.config.set("SETTINGS", "frame_count", self.ui.spin_I.value())
-        self.config.write(open("resources\conf\properties.ini", "w"))
+        self.config.write(open("resources/var/config.ini", "w"))
         self.close()
 
     def undo_changes(self):
