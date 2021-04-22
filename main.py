@@ -5,9 +5,7 @@
 import configparser, sys, os, webbrowser, time
 
 # Сторонние библиотеки
-# pip install hurry.filesize
-# pip install pyqt5
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets  # pip install pyqt5
 
 # Локальные модули
 from resources.visual.ui_main import Ui_MainWindow
@@ -19,6 +17,7 @@ from modules.aes import Encryptor as SyncEncr
 from modules.rsa import Encryptor as ASyncEncr
 
 # Глобальные переменные
+import resources.var.globals
 
 
 class MainWndProc(QtWidgets.QMainWindow):
@@ -49,13 +48,19 @@ class MainWndProc(QtWidgets.QMainWindow):
 
     @staticmethod
     def load_properties():
-        global DEGREE, FRAME_START, FRAME_COUNT, OUTPUT_DIR
+        global DEGREE, FRAME_START, FRAME_COUNT, OUTPUT_DIR, \
+            U_FNAME, U_SNAME, U_LNAME, U_EMAIL
         config = configparser.RawConfigParser()
-        config.read("resources/conf/config.ini")
+        config.read('resources/var/config.ini')
         DEGREE = config.getint("SETTINGS", "degree_value")
         FRAME_START = config.getint("SETTINGS", "frame_start")
         FRAME_COUNT = config.getint("SETTINGS", "frame_count")
         OUTPUT_DIR = config.get("SETTINGS", "output_dir")
+        U_FNAME = config.get("LICENSE", "user_first_name")
+        U_SNAME = config.get("LICENSE", "user_second_name")
+        U_LNAME = config.get("LICENSE", "user_last_name")
+        U_EMAIL = config.get("LICENSE", "user_email")
+
 
     def show_settings(self):
         self.next = SettingsWndProc()
@@ -71,54 +76,88 @@ class MainWndProc(QtWidgets.QMainWindow):
 
     @staticmethod
     def fill_copyright(path):
-        global COPYRIGHT, DATE_CREATE, DATE_MODIFY, OWNER, NAME
-        DATE_CREATE = time.strftime("%d.%m.%Y %H:%M", time.localtime(os.path.getctime(path)))
-        DATE_MODIFY = time.strftime("%d.%m.%Y %H:%M", time.localtime(os.path.getmtime(path)))
-        OWNER = FileInfo.get_file_info(path, 'short')
-        NAME = os.path.basename(path)
+        global COPYRIGHT, F_DATE_CREATE, F_DATE_MODIFY, F_OWNER, F_NAME
+        F_DATE_CREATE = time.strftime("%d.%m.%Y %H:%M", time.localtime(os.path.getctime(path)))
+        F_DATE_MODIFY = time.strftime("%d.%m.%Y %H:%M", time.localtime(os.path.getmtime(path)))
+        F_OWNER = FileInfo.get_file_info(path, 'short')
+        F_NAME = os.path.basename(path)
 
-        COPYRIGHT = f'Copyright: © {NAME},\n{DATE_CREATE}, {OWNER}\nAll Rights Reserved.'
+        COPYRIGHT = f'Copyright: © {F_NAME},\n{F_DATE_CREATE}, {F_OWNER}\nAll Rights Reserved.'
         return COPYRIGHT
 
     def encode(self):
+        def enc_crypt():
+            global COPYRIGHT, U_FNAME, U_SNAME, U_LNAME, U_EMAIL
+            AES = SyncEncr(option='generate', key_data=(U_FNAME + U_SNAME + U_LNAME))
+            return AES.encrypt(COPYRIGHT.encode())
+
+        def enc_stego():
+            pass
+
+        def enc_eds(path_to_file):
+            RSA = ASyncEncr()
+            return RSA.encrypt(path_to_file)
+
+        def create_license():
+            global OUTPUT_DIR, F_NAME
+
         self.loading('---ЗАЩИТА-ВИДЕО-АП---', 3)
         if self.ui.le_enc_path_input.text() == '':
             QtWidgets.QMessageBox.warning(self, 'Ошибка!', 'Невозможно выполнить процесс защиты файла авторским правом - не выбран видео файл', QtWidgets.QMessageBox.Ok)
             self.loading('Ошибка! Нехватка данных<br/>', 2)
             return 0
-        global OUTPUT_DIR, NAME, COPYRIGHT, DATE_CREATE
+
         self.loading('Шифрование копирайта')
-        # Ключ симметричного алгоритма шифрования
-        key = '2yDynDCk5Njsvq2m'.encode()  # 16 байт - длина ключа в байтах
-        copyright_byte = COPYRIGHT.encode()
-        AES = SyncEncr(key)
-        copyright_encrypted = AES.encrypt(copyright_byte)
-        copyright_decrypted = AES.decrypt(copyright_encrypted)
-        open(os.path.realpath(f'{OUTPUT_DIR}/tmp/{NAME}.AES.enc'), 'wb').write(copyright_encrypted)
-        open(os.path.realpath(f'{OUTPUT_DIR}/tmp/{NAME}.AES.dec'), 'wb').write(copyright_decrypted)
+        copyright_encrypted = enc_crypt()
 
         self.loading('Получение ЭЦП')
-        RSA = ASyncEncr()
-        signature = RSA.encrypt(self.ui.le_enc_path_input.text())
-        correct = RSA.decrypt(self.ui.le_enc_path_input.text(), signature)
-        self.loading('Лицензионная копия!', 1) if correct else self.loading('Пиратская копия!', 2)
+        signature = enc_eds(self.ui.le_enc_path_input.text())
 
-        self.loading('Сохранение ключей ЭЦП')
-
-        self.loading('Подготавка видео файла')
-
-        self.loading('Выполнение процесса стеганографии')
-
-        self.loading()
-        webbrowser.open(os.path.realpath(OUTPUT_DIR))  # открываем папку в проводнике
+        # self.loading('---ЗАЩИТА-ВИДЕО-АП---', 3)
+        # if self.ui.le_enc_path_input.text() == '':
+        #     QtWidgets.QMessageBox.warning(self, 'Ошибка!', 'Невозможно выполнить процесс защиты файла авторским правом - не выбран видео файл', QtWidgets.QMessageBox.Ok)
+        #     self.loading('Ошибка! Нехватка данных<br/>', 2)
+        #     return 0
+        # global OUTPUT_DIR, F_NAME, COPYRIGHT, F_DATE_CREATE
+        # self.loading('Шифрование копирайта')
+        # # Ключ симметричного алгоритма шифрования
+        # key = b""  # 16 байт - длина ключа в байтах
+        # copyright_byte = COPYRIGHT.encode()
+        # AES = SyncEncr(option='generate')
+        # copyright_encrypted = AES.encrypt(copyright_byte)
+        # copyright_decrypted = AES.decrypt(copyright_encrypted)
+        # open(os.path.realpath(f'{OUTPUT_DIR}/tmp/{NAME}.AES.enc'), 'wb').write(copyright_encrypted)
+        # open(os.path.realpath(f'{OUTPUT_DIR}/tmp/{NAME}.AES.dec'), 'wb').write(copyright_decrypted)
+        #
+        # self.loading('Получение ЭЦП')
+        # RSA = ASyncEncr()
+        # signature = RSA.encrypt(self.ui.le_enc_path_input.text())
+        # correct = RSA.decrypt(self.ui.le_enc_path_input.text(), signature)
+        # self.loading('Лицензионная копия!', 1) if correct else self.loading('Пиратская копия!', 2)
+        #
+        # self.loading('Сохранение ключей ЭЦП')
+        #
+        # self.loading('Подготавка видео файла')
+        #
+        # self.loading('Выполнение процесса стеганографии')
+        #
+        # self.loading()
+        # webbrowser.open(os.path.realpath(OUTPUT_DIR))  # открываем папку в проводнике
         # os.system(f'start {os.path.realpath(self.ui.tb_out_folder.text())}')  # альтернатива
+        #
+        # Правильная последовательность:
+        # 1. Шифрование копирайта
+        # 2. Стеганография
+        # 3. ЭЦП
+        # 4. Сертификат
 
     def decode(self):
-        self.loading('---ПРОВЕРКА-АП-ВИДЕО---', 3)
-        if self.ui.le_dec_path_input_1.text() == '' or self.ui.le_dec_path_input_2.text() == '':
-            QtWidgets.QMessageBox.warning(self, 'Ошибка!', 'Невозможно выполнить процесс проверки авторского права - не все файлы выбраны.', QtWidgets.QMessageBox.Ok)
-            self.loading('Ошибка! Нехватка данных', 2)
-            return 0
+        pass
+        # self.loading('---ПРОВЕРКА-АП-ВИДЕО---', 3)
+        # if self.ui.le_dec_path_input_1.text() == '' or self.ui.le_dec_path_input_2.text() == '':
+        #     QtWidgets.QMessageBox.warning(self, 'Ошибка!', 'Невозможно выполнить процесс проверки авторского права - не все файлы выбраны.', QtWidgets.QMessageBox.Ok)
+        #     self.loading('Ошибка! Нехватка данных', 2)
+        #     return 0
 
     def loading(self, msg='<p></p>', color=0):
         if not msg == '<p></p>':
@@ -144,8 +183,9 @@ class SettingsWndProc(QtWidgets.QMainWindow):
         self.ui = Ui_SettingsWindow()  # Создаем объект класса, описывающего интерфейс
         self.ui.setupUi(self)  # Позиционируем все элементы интерфейса
         self.show()  # Отобразить форму настроек
+        self.PATH_TO_CFG = 'resources/var/config.ini'
         self.config = configparser.RawConfigParser()  # Объект файла конфигурации
-        self.config.read("resources/conf/config.ini")
+        self.config.read(self.PATH_TO_CFG)
         self.load_properties()  # Подготовить последние сохраненные настройки приложения
         # Обработчики кнопок
         self.ui.btn_OK.clicked.connect(self.save_changes)  # Применение настроек
@@ -182,7 +222,7 @@ class SettingsWndProc(QtWidgets.QMainWindow):
         self.config.set("SETTINGS", "degree_value", degree_value)
         self.config.set("SETTINGS", "frame_start", self.ui.spin_N.value())
         self.config.set("SETTINGS", "frame_count", self.ui.spin_I.value())
-        self.config.write(open("resources/var/config.ini", "w"))
+        self.config.write(open(self.PATH_TO_CFG, "w"))
         self.close()
 
     def undo_changes(self):
