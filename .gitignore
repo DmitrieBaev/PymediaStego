@@ -4,4 +4,4 @@
 /.idea/PymediaStego.iml
 /.idea/vcs.xml
 /modules/system.py
-/inputdlg.py
+/ui_input_dlg.py

@@ -10,13 +10,13 @@ from threading import Thread
 # pip install hurry.filesize
 from hurry.filesize import size  # Конвертор размеров файлов
 # pip install pyqt5
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, QtGui
 
 # Локальные модули
-from mainframe import Ui_MainWindow
-from settings import Ui_SettingsWindow
+from ui_main import Ui_MainWindow
+from ui_settings import Ui_SettingsWindow
 #from inputdlg import Ui_InDialogWindow
-from help import Ui_HelpWindow
+from ui_help import Ui_HelpWindow
 import modules.stego as Steganography, modules.win32 as FileInfo
 from modules.aes import Encryptor as SyncEncr
 from modules.rsa import Encryptor as ASyncEncr
@@ -31,13 +31,25 @@ class MainWndProc(QtWidgets.QMainWindow):
         super(MainWndProc, self).__init__()  # Наследуем инициализацию окна от прородителя QtWidgets
         self.ui = Ui_MainWindow()  # Создаем объект класса, описывающего интерфейс
         self.ui.setupUi(self)  # Позиционируем все элементы интерфейса
+        self.statement = False
         self.load_properties()
         # Обработчики кнопок
-        self.ui.btn_settings.clicked.connect(self.show_settings)
-        self.ui.btn_help.clicked.connect(self.show_help)
-        self.ui.btn_choose.clicked.connect(self.choose_carrier)
+        self.ui.btn_show_settings.clicked.connect(self.show_settings)
+        self.ui.btn_show_info.clicked.connect(self.show_help)
+        self.ui.btn_enc_choose.clicked.connect(self.choose_carrier)
         self.ui.btn_enc.clicked.connect(self.encode)
         self.ui.btn_dec.clicked.connect(self.decode)
+        self.ui.btn_show_log.clicked.connect(self.show_hide_changelog)
+
+    def show_hide_changelog(self):
+        if not self.statement:
+            self.statement = True
+            self.ui.btn_show_log.setIcon(self.ui.icon_hide)
+            self.ui.resizeUi(self)
+        else:
+            self.statement = False
+            self.ui.btn_show_log.setIcon(self.ui.icon_show)
+            self.ui.resizeUi(self, Height=285)
 
     @staticmethod
     def load_properties():
@@ -58,7 +70,7 @@ class MainWndProc(QtWidgets.QMainWindow):
     def choose_carrier(self):
         fileName, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Выберите видео файл", "", "TEST!!! (*.*)", options=QtWidgets.QFileDialog.Options())
         if fileName:
-            self.ui.path_input.setText(fileName)
+            self.ui.le_enc_path_input.setText(fileName)
             self.ui.copyright.setPlainText(self.fill_copyright(fileName))
 
     @staticmethod
@@ -73,44 +85,76 @@ class MainWndProc(QtWidgets.QMainWindow):
         return COPYRIGHT
 
     def encode(self):
-        if self.ui.path_input.text() == '':
-            QtWidgets.QMessageBox.warning(self, 'Ошибка!', 'Невозможно выполнить процесс защиты файла авторским правом - не выбран видео файл', QtWidgets.QMessageBox.Ok)
-            return 0
-        global OUTPUT_DIR, NAME, COPYRIGHT, DATE_CREATE
-        self.loading('Выполнение процесса шифрования копирайта')
-        # Ключ симметричного алгоритма шифрования
-        key = '2yDynDCk5Njsvq2m'.encode()  # 16 байт - длина ключа в байтах
-        copyright_byte = COPYRIGHT.encode()
-        AES = SyncEncr(key)
-        copyright_encrypted = AES.encrypt(copyright_byte)
-        copyright_decrypted = AES.decrypt(copyright_encrypted)
-        open(os.path.realpath(f'{OUTPUT_DIR}/tmp/{NAME}.AES.enc'), 'wb').write(copyright_encrypted)
-        open(os.path.realpath(f'{OUTPUT_DIR}/tmp/{NAME}.AES.dec'), 'wb').write(copyright_decrypted)
+        self.loading('Успех!', 1)
+        self.loading('Ошибка!', 2)
+        self.loading('Необычной длинны текст лога для проверки WordWrap-а')
+        self.loading('Ошибка!', 2)
+        self.loading('Успех!', 1)
+        # self.loading('Обычной лог!', 2)
 
-        self.loading('Получение ЭЦП')
-        RSA = ASyncEncr()
-        signature = RSA.encrypt(DATE_CREATE.encode())
-        correct = RSA.decrypt(DATE_CREATE.encode(), signature)
-        print(f'ЭЦП корректна? {correct}')
-
-        self.loading('Сохранение ключей ЭЦП')
-
-        self.loading('Подготавка видео файла')
-
-        self.loading('Выполнение процесса стеганографии')
-
-        # self.loading('')
-        webbrowser.open(os.path.realpath(OUTPUT_DIR))  # открываем папку в проводнике
+        # if self.ui.le_enc_path_input.text() == '':
+        #     QtWidgets.QMessageBox.warning(self, 'Ошибка!', 'Невозможно выполнить процесс защиты файла авторским правом - не выбран видео файл', QtWidgets.QMessageBox.Ok)
+        #     return 0
+        # global OUTPUT_DIR, NAME, COPYRIGHT, DATE_CREATE
+        # self.loading('Выполнение процесса шифрования копирайта')
+        # # Ключ симметричного алгоритма шифрования
+        # key = '2yDynDCk5Njsvq2m'.encode()  # 16 байт - длина ключа в байтах
+        # copyright_byte = COPYRIGHT.encode()
+        # AES = SyncEncr(key)
+        # copyright_encrypted = AES.encrypt(copyright_byte)
+        # copyright_decrypted = AES.decrypt(copyright_encrypted)
+        # open(os.path.realpath(f'{OUTPUT_DIR}/tmp/{NAME}.AES.enc'), 'wb').write(copyright_encrypted)
+        # open(os.path.realpath(f'{OUTPUT_DIR}/tmp/{NAME}.AES.dec'), 'wb').write(copyright_decrypted)
+        #
+        # self.loading('Получение ЭЦП')
+        # RSA = ASyncEncr()
+        # signature = RSA.encrypt(DATE_CREATE.encode())
+        # correct = RSA.decrypt(DATE_CREATE.encode(), signature)
+        # print(f'ЭЦП корректна? {correct}')
+        #
+        # self.loading('Сохранение ключей ЭЦП')
+        #
+        # self.loading('Подготавка видео файла')
+        #
+        # self.loading('Выполнение процесса стеганографии')
+        # webbrowser.open(os.path.realpath(OUTPUT_DIR))  # открываем папку в проводнике
         # os.system(f'start {os.path.realpath(self.ui.tb_out_folder.text())}')  # альтернатива
 
     def decode(self):
         pass
 
-    def loading(self, msg, object='btn'):
-        if object == 'lbl':
-            self.ui.lbl_progress.setText(f'<p style="color: rgb(250, 55, 55);">{msg}</p>')
-        else:
-            self.ui.btn_enc.setText('Обработка')
+    def loading(self, msg, color=0):
+        colors = ['rgb(250, 250, 250)', 'rgb(55, 250, 55)', 'rgb(250, 55, 55)']
+        self.ui.pte_change_log.appendHtml(f'<p style="color:{colors[color]}">[{time.strftime("%d.%m.%Y %H:%M", time.localtime())}]   {msg}</p>')
+
+        # colors = ['rgb(0, 0, 0)', 'rgb(55, 250, 55)', 'rgb(250, 55, 55)']
+        # tf = self.ui.pte_change_log.currentCharFormat()
+        # tf.setForeground(QtGui.QBrush(colors[color]))
+        # self.ui.pte_change_log.setCurrentCharFormat(tf)
+        # self.ui.pte_change_log.appendPlainText(f'[{time.strftime("%d.%m.%Y %H:%M", time.localtime())}]   {msg}\n')
+
+        # colors = ['white', 'rgb(55, 250, 55)', 'rgb(250, 55, 55)']
+        # log_line = f'[{time.strftime("%d.%m.%Y %H:%M", time.localtime())}]   {msg}\n'
+        # log = self.ui.pte_change_log.toPlainText()
+        # self.ui.pte_change_log.setStyleSheet("QPlainTextEdit { color: " + colors[progress] + "; background-color: black;}")
+        # self.ui.pte_change_log.setPlainText(log[:-2] + log_line + log[-2:])
+
+        # def log_print(styled_log_line, color='white'):
+        #     log = self.ui.pte_change_log.toPlainText()
+        #     self.ui.pte_change_log.setStyleSheet("QPlainTextEdit { color: " + color + "; background-color: black;}")
+        #     self.ui.pte_change_log.text.setPlainText(log[:-2] + styled_log_line + log[-2:])  #
+        #     # QtWidgets.QMessageBox.warning(self, '', log, QtWidgets.QMessageBox.Ok)
+        #
+        # log_line = f'[{time.strftime("%d.%m.%Y %H:%M", time.localtime())}]   {msg}\n'
+        # if progress == 0:
+        #     log_print(log_line)
+        # elif progress == 1:
+        #     log_print(log_line, 'rgb(55, 250, 55)')
+        # elif progress == -1:
+        #     log_print(log_line, 'rgb(250, 55, 55)')
+        # else:
+        #     QtWidgets.QMessageBox.warning(self, 'Ошибка!', 'При передачи на отображение лога указан неверный индекс.\nПроверьте правильность передачи индексов.', QtWidgets.QMessageBox.Ok)
+
 
 
 class HelpWndProc(QtWidgets.QMainWindow):

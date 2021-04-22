@@ -1,7 +1,7 @@
 from modules.aes import Encryptor as SyncEncr
 from modules.rsa import Encryptor as ASyncEncr
 
-COPYRIGHT = 'Copyright: © help.py,\n06.04.2021 12:47, okeyw\nAll Rights Reserved.'
+COPYRIGHT = 'Copyright: © ui_help.py,\n06.04.2021 12:47, okeyw\nAll Rights Reserved.'
 
 
 if __name__ == '__main__':
