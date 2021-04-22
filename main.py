@@ -6,6 +6,7 @@ import configparser, sys, os, webbrowser, time
 
 # Сторонние библиотеки
 from PyQt5 import QtWidgets  # pip install pyqt5
+import yaml # pip install pyyaml
 
 # Локальные модули
 from resources.visual.ui_main import Ui_MainWindow
@@ -96,10 +97,29 @@ class MainWndProc(QtWidgets.QMainWindow):
 
         def enc_eds(path_to_file):
             RSA = ASyncEncr()
-            return RSA.encrypt(path_to_file)
+            return RSA.get_eds(path_to_file)
 
-        def create_license():
-            global OUTPUT_DIR, F_NAME
+        def create_license(copyright_encrypted, EDS):
+            global OUTPUT_DIR, \
+                F_NAME, F_OWNER, F_DATE_CREATE, F_DATE_MODIFY, \
+                U_FNAME, U_SNAME, U_LNAME, U_EMAIL
+            license = {'FileInfo':
+                           {'FileName': F_NAME,
+                            'FileCreateDate': F_DATE_CREATE,
+                            'FileModifyDate': F_DATE_MODIFY,
+                            'FileOwner': F_OWNER},
+                       'AdditionalInfo':
+                           {'EDS': EDS,
+                            'Copyright': copyright_encrypted},
+                       'UserInfo':
+                           {'UserName': U_FNAME,
+                            'UserSurname': U_SNAME,
+                            'UserFathername': U_LNAME,
+                            'UserEmail': U_EMAIL}}
+            # открываем файл на запись
+            with open(f'{OUTPUT_DIR}/{F_NAME[:F_NAME.rindex(".")]}_license.yml', 'w') as fw:
+                # сериализуем словарь `license` в формат YAML и записываем все в файл
+                data = yaml.dump(license, fw, sort_keys=False, default_flow_style=False)
 
         self.loading('---ЗАЩИТА-ВИДЕО-АП---', 3)
         if self.ui.le_enc_path_input.text() == '':
@@ -107,11 +127,18 @@ class MainWndProc(QtWidgets.QMainWindow):
             self.loading('Ошибка! Нехватка данных<br/>', 2)
             return 0
 
+        global OUTPUT_DIR
         self.loading('Шифрование копирайта')
         copyright_encrypted = enc_crypt()
 
         self.loading('Получение ЭЦП')
         signature = enc_eds(self.ui.le_enc_path_input.text())
+
+        self.loading('Конфигурация сертификата')
+        create_license(copyright_encrypted, signature)
+
+        self.loading()
+        webbrowser.open(os.path.realpath(OUTPUT_DIR))  # открываем папку в проводнике
 
         # self.loading('---ЗАЩИТА-ВИДЕО-АП---', 3)
         # if self.ui.le_enc_path_input.text() == '':

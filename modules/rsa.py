@@ -39,14 +39,12 @@ class Encryptor:
                 _hash.update(data)
         return _hash
 
-    def encrypt(self, path_to_file):
+    def get_eds(self, path_to_file):
         h = self.get_hash(path_to_file)
-        print(h.digest())
         return PKCS1_v1_5.new(self.PR).sign(h)
 
-    def decrypt(self, path_to_file, signature):
+    def verify_eds(self, path_to_file, signature):
         h = self.get_hash(path_to_file)
-        print(h.digest())
         if PKCS1_v1_5.new(self.PU).verify(h, signature):
             return True
         else:
