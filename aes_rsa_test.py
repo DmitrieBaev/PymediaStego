@@ -13,6 +13,6 @@ if __name__ == '__main__':
     copyright_decrypted = AES.decrypt(copyright_encrypted)
 
     RSA = ASyncEncr()
-    signature = RSA.encrypt('06.04.2021 12:47'.encode())
-    correct = RSA.decrypt('06.04.2021 12:47'.encode(), signature)
+    signature = RSA.encrypt(r'C:\Users\okeyw\PycharmProjects\PymediaStego\info.txt')
+    correct = RSA.decrypt(r'C:\Users\okeyw\PycharmProjects\PymediaStego\info.txt', signature)
     print(f'ЭЦП корректна? {correct}')

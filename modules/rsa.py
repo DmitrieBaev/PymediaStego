@@ -28,13 +28,24 @@ class Encryptor:
         self.PR = RSA.importKey(open('resources/var/PR.pem').read())
         self.PU = RSA.importKey(open('resources/var/PU.pem').read())
 
-    def encrypt(self, creation_file_date):
-        h = SHA256.new(creation_file_date)
+    @staticmethod
+    def get_hash(path_to_file):
+        _hash, _buf = SHA256.new(), 65536
+        with open(path_to_file, 'rb') as f:
+            while True:
+                data = f.read(_buf)
+                if not data:
+                    break
+                _hash.update(data)
+        return _hash
+
+    def encrypt(self, path_to_file):
+        h = self.get_hash(path_to_file)
         print(h.digest())
         return PKCS1_v1_5.new(self.PR).sign(h)
 
-    def decrypt(self, creation_file_date, signature):
-        h = SHA256.new(creation_file_date)
+    def decrypt(self, path_to_file, signature):
+        h = self.get_hash(path_to_file)
         print(h.digest())
         if PKCS1_v1_5.new(self.PU).verify(h, signature):
             return True

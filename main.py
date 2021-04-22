@@ -55,7 +55,7 @@ class MainWndProc(QtWidgets.QMainWindow):
     def load_properties():
         global DEGREE, FRAME_START, FRAME_COUNT, OUTPUT_DIR
         config = configparser.RawConfigParser()
-        config.read("resources\conf\properties.ini")
+        config.read("resources/conf/properties.ini")
         DEGREE = config.getint("SETTINGS", "degree_value")
         FRAME_START = config.getint("SETTINGS", "frame_start")
         FRAME_COUNT = config.getint("SETTINGS", "frame_count")
@@ -68,7 +68,7 @@ class MainWndProc(QtWidgets.QMainWindow):
         self.next = HelpWndProc()
 
     def choose_carrier(self):
-        fileName, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Выберите видео файл", "", "TEST!!! (*.*)", options=QtWidgets.QFileDialog.Options())
+        fileName, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Выберите видео файл", "", "TEST!!! (*.txt *.png *.jpg)", options=QtWidgets.QFileDialog.Options())
         if fileName:
             self.ui.le_enc_path_input.setText(fileName)
             self.ui.copyright.setPlainText(self.fill_copyright(fileName))
@@ -85,76 +85,51 @@ class MainWndProc(QtWidgets.QMainWindow):
         return COPYRIGHT
 
     def encode(self):
-        self.loading('Успех!', 1)
-        self.loading('Ошибка!', 2)
-        self.loading('Необычной длинны текст лога для проверки WordWrap-а')
-        self.loading('Ошибка!', 2)
-        self.loading('Успех!', 1)
-        # self.loading('Обычной лог!', 2)
+        self.loading('---ЗАЩИТА-ВИДЕО-АП---', 3)
+        if self.ui.le_enc_path_input.text() == '':
+            QtWidgets.QMessageBox.warning(self, 'Ошибка!', 'Невозможно выполнить процесс защиты файла авторским правом - не выбран видео файл', QtWidgets.QMessageBox.Ok)
+            self.loading('Ошибка! Нехватка данных<br/>', 2)
+            return 0
+        global OUTPUT_DIR, NAME, COPYRIGHT, DATE_CREATE
+        self.loading('Шифрование копирайта')
+        # Ключ симметричного алгоритма шифрования
+        key = '2yDynDCk5Njsvq2m'.encode()  # 16 байт - длина ключа в байтах
+        copyright_byte = COPYRIGHT.encode()
+        AES = SyncEncr(key)
+        copyright_encrypted = AES.encrypt(copyright_byte)
+        copyright_decrypted = AES.decrypt(copyright_encrypted)
+        open(os.path.realpath(f'{OUTPUT_DIR}/tmp/{NAME}.AES.enc'), 'wb').write(copyright_encrypted)
+        open(os.path.realpath(f'{OUTPUT_DIR}/tmp/{NAME}.AES.dec'), 'wb').write(copyright_decrypted)
 
-        # if self.ui.le_enc_path_input.text() == '':
-        #     QtWidgets.QMessageBox.warning(self, 'Ошибка!', 'Невозможно выполнить процесс защиты файла авторским правом - не выбран видео файл', QtWidgets.QMessageBox.Ok)
-        #     return 0
-        # global OUTPUT_DIR, NAME, COPYRIGHT, DATE_CREATE
-        # self.loading('Выполнение процесса шифрования копирайта')
-        # # Ключ симметричного алгоритма шифрования
-        # key = '2yDynDCk5Njsvq2m'.encode()  # 16 байт - длина ключа в байтах
-        # copyright_byte = COPYRIGHT.encode()
-        # AES = SyncEncr(key)
-        # copyright_encrypted = AES.encrypt(copyright_byte)
-        # copyright_decrypted = AES.decrypt(copyright_encrypted)
-        # open(os.path.realpath(f'{OUTPUT_DIR}/tmp/{NAME}.AES.enc'), 'wb').write(copyright_encrypted)
-        # open(os.path.realpath(f'{OUTPUT_DIR}/tmp/{NAME}.AES.dec'), 'wb').write(copyright_decrypted)
-        #
-        # self.loading('Получение ЭЦП')
-        # RSA = ASyncEncr()
-        # signature = RSA.encrypt(DATE_CREATE.encode())
-        # correct = RSA.decrypt(DATE_CREATE.encode(), signature)
-        # print(f'ЭЦП корректна? {correct}')
-        #
-        # self.loading('Сохранение ключей ЭЦП')
-        #
-        # self.loading('Подготавка видео файла')
-        #
-        # self.loading('Выполнение процесса стеганографии')
-        # webbrowser.open(os.path.realpath(OUTPUT_DIR))  # открываем папку в проводнике
+        self.loading('Получение ЭЦП')
+        RSA = ASyncEncr()
+        signature = RSA.encrypt(self.ui.le_enc_path_input.text())
+        correct = RSA.decrypt(self.ui.le_enc_path_input.text(), signature)
+        self.loading('Лицензионная копия!', 1) if correct else self.loading('Пиратская копия!', 2)
+
+        self.loading('Сохранение ключей ЭЦП')
+
+        self.loading('Подготавка видео файла')
+
+        self.loading('Выполнение процесса стеганографии')
+
+        self.loading()
+        webbrowser.open(os.path.realpath(OUTPUT_DIR))  # открываем папку в проводнике
         # os.system(f'start {os.path.realpath(self.ui.tb_out_folder.text())}')  # альтернатива
 
     def decode(self):
-        pass
+        self.loading('---ПРОВЕРКА-АП-ВИДЕО---', 3)
+        if self.ui.le_dec_path_input_1.text() == '' or self.ui.le_dec_path_input_2.text() == '':
+            QtWidgets.QMessageBox.warning(self, 'Ошибка!', 'Невозможно выполнить процесс проверки авторского права - не все файлы выбраны.', QtWidgets.QMessageBox.Ok)
+            self.loading('Ошибка! Нехватка данных', 2)
+            return 0
 
-    def loading(self, msg, color=0):
-        colors = ['rgb(250, 250, 250)', 'rgb(55, 250, 55)', 'rgb(250, 55, 55)']
-        self.ui.pte_change_log.appendHtml(f'<p style="color:{colors[color]}">[{time.strftime("%d.%m.%Y %H:%M", time.localtime())}]   {msg}</p>')
-
-        # colors = ['rgb(0, 0, 0)', 'rgb(55, 250, 55)', 'rgb(250, 55, 55)']
-        # tf = self.ui.pte_change_log.currentCharFormat()
-        # tf.setForeground(QtGui.QBrush(colors[color]))
-        # self.ui.pte_change_log.setCurrentCharFormat(tf)
-        # self.ui.pte_change_log.appendPlainText(f'[{time.strftime("%d.%m.%Y %H:%M", time.localtime())}]   {msg}\n')
-
-        # colors = ['white', 'rgb(55, 250, 55)', 'rgb(250, 55, 55)']
-        # log_line = f'[{time.strftime("%d.%m.%Y %H:%M", time.localtime())}]   {msg}\n'
-        # log = self.ui.pte_change_log.toPlainText()
-        # self.ui.pte_change_log.setStyleSheet("QPlainTextEdit { color: " + colors[progress] + "; background-color: black;}")
-        # self.ui.pte_change_log.setPlainText(log[:-2] + log_line + log[-2:])
-
-        # def log_print(styled_log_line, color='white'):
-        #     log = self.ui.pte_change_log.toPlainText()
-        #     self.ui.pte_change_log.setStyleSheet("QPlainTextEdit { color: " + color + "; background-color: black;}")
-        #     self.ui.pte_change_log.text.setPlainText(log[:-2] + styled_log_line + log[-2:])  #
-        #     # QtWidgets.QMessageBox.warning(self, '', log, QtWidgets.QMessageBox.Ok)
-        #
-        # log_line = f'[{time.strftime("%d.%m.%Y %H:%M", time.localtime())}]   {msg}\n'
-        # if progress == 0:
-        #     log_print(log_line)
-        # elif progress == 1:
-        #     log_print(log_line, 'rgb(55, 250, 55)')
-        # elif progress == -1:
-        #     log_print(log_line, 'rgb(250, 55, 55)')
-        # else:
-        #     QtWidgets.QMessageBox.warning(self, 'Ошибка!', 'При передачи на отображение лога указан неверный индекс.\nПроверьте правильность передачи индексов.', QtWidgets.QMessageBox.Ok)
-
+    def loading(self, msg='<p></p>', color=0):
+        if not msg == '<p></p>':
+            colors = ['rgb(250, 250, 250)', 'rgb(55, 250, 55)', 'rgb(250, 55, 55)', 'rgb(55, 55, 250)']
+            self.ui.pte_change_log.appendHtml(f'<p style="color:{colors[color]}">[{time.strftime("%d.%m.%Y %H:%M:%S", time.localtime())}]   {msg}</p>')
+        else:
+            self.ui.pte_change_log.appendHtml('<p></p>')
 
 
 class HelpWndProc(QtWidgets.QMainWindow):
@@ -174,7 +149,7 @@ class SettingsWndProc(QtWidgets.QMainWindow):
         self.ui.setupUi(self)  # Позиционируем все элементы интерфейса
         self.show()  # Отобразить форму настроек
         self.config = configparser.RawConfigParser()  # Объект файла конфигурации
-        self.config.read("resources\conf\properties.ini")
+        self.config.read("resources/conf/properties.ini")
         self.load_properties()  # Подготовить последние сохраненные настройки приложения
         # Обработчики кнопок
         self.ui.btn_OK.clicked.connect(self.save_changes)  # Применение настроек
