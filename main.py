@@ -119,7 +119,7 @@ class MainWndProc(QtWidgets.QMainWindow):
             # открываем файл на запись
             with open(f'{OUTPUT_DIR}/{F_NAME[:F_NAME.rindex(".")]}_license.yml', 'w') as fw:
                 # сериализуем словарь `license` в формат YAML и записываем все в файл
-                data = yaml.dump(license, fw, sort_keys=False, default_flow_style=False)
+                yaml.dump(license, fw, sort_keys=False, default_flow_style=False)  # data = ...
 
         self.loading('---ЗАЩИТА-ВИДЕО-АП---', 3)
         if self.ui.le_enc_path_input.text() == '':
