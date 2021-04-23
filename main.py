@@ -6,7 +6,8 @@ import configparser, sys, os, webbrowser, time
 
 # Сторонние библиотеки
 from PyQt5 import QtWidgets  # pip install pyqt5
-import yaml # pip install pyyaml
+import yaml  # pip install pyyaml
+from yaml.loader import SafeLoader
 
 # Локальные модули
 from resources.visual.ui_main import Ui_MainWindow
@@ -32,10 +33,12 @@ class MainWndProc(QtWidgets.QMainWindow):
         # Обработчики кнопок
         self.ui.btn_show_settings.clicked.connect(self.show_settings)
         self.ui.btn_show_info.clicked.connect(self.show_help)
-        self.ui.btn_enc_choose.clicked.connect(self.choose_carrier)
+        self.ui.btn_enc_choose.clicked.connect(self.choose_carrier_enc)
         self.ui.btn_enc.clicked.connect(self.encode)
         self.ui.btn_dec.clicked.connect(self.decode)
         self.ui.btn_show_log.clicked.connect(self.show_hide_changelog)
+        self.ui.btn_dec_choose_1.clicked.connect(self.choose_carrier_dec)
+        self.ui.btn_dec_choose_2.clicked.connect(self.choose_license)
 
     def show_hide_changelog(self):
         if not self.statement:
@@ -69,11 +72,27 @@ class MainWndProc(QtWidgets.QMainWindow):
     def show_help(self):
         self.next = HelpWndProc()
 
-    def choose_carrier(self):
-        fileName, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Выберите видео файл", "", "TEST!!! (*.txt *.png *.jpg)", options=QtWidgets.QFileDialog.Options())
+    def choose_carrier_enc(self):
+        fileName, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Выберите видео файл", "",
+                                                            "TEST!!! (*.txt *.png *.jpg)",
+                                                            options=QtWidgets.QFileDialog.Options())
         if fileName:
             self.ui.le_enc_path_input.setText(fileName)
             self.ui.copyright.setPlainText(self.fill_copyright(fileName))
+
+    def choose_carrier_dec(self):
+        fileName, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Выберите видео файл", "",
+                                                            "TEST!!! (*.txt *.png *.jpg)",
+                                                            options=QtWidgets.QFileDialog.Options())
+        if fileName:
+            self.ui.le_dec_path_input_1.setText(fileName)
+
+    def choose_license(self):
+        fileName, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Выберите файл сертификата лицензированного файла", "",
+                                                            "Сертификат лицензии файла (*.yml)",
+                                                            options=QtWidgets.QFileDialog.Options())
+        if fileName:
+            self.ui.le_dec_path_input_2.setText(fileName)
 
     @staticmethod
     def fill_copyright(path):
@@ -95,9 +114,9 @@ class MainWndProc(QtWidgets.QMainWindow):
         def enc_stego():
             pass
 
-        def enc_eds(path_to_file):
+        def enc_eds(path_to_video):
             RSA = ASyncEncr()
-            return RSA.get_eds(path_to_file)
+            return RSA.get_eds(path_to_video)
 
         def create_license(copyright_encrypted, EDS):
             global OUTPUT_DIR, \
@@ -123,20 +142,19 @@ class MainWndProc(QtWidgets.QMainWindow):
 
         self.loading('---ЗАЩИТА-ВИДЕО-АП---', 3)
         if self.ui.le_enc_path_input.text() == '':
-            QtWidgets.QMessageBox.warning(self, 'Ошибка!', 'Невозможно выполнить процесс защиты файла авторским правом - не выбран видео файл', QtWidgets.QMessageBox.Ok)
+            QtWidgets.QMessageBox.warning(self, 'Ошибка!',
+                                          'Невозможно выполнить процесс защиты файла авторским правом - не выбран видео файл',
+                                          QtWidgets.QMessageBox.Ok)
             self.loading('Ошибка! Нехватка данных<br/>', 2)
             return 0
 
         global OUTPUT_DIR
         self.loading('Шифрование копирайта')
         copyright_encrypted = enc_crypt()
-
         self.loading('Получение ЭЦП')
         signature = enc_eds(self.ui.le_enc_path_input.text())
-
         self.loading('Конфигурация сертификата')
         create_license(copyright_encrypted, signature)
-
         self.loading()
         webbrowser.open(os.path.realpath(OUTPUT_DIR))  # открываем папку в проводнике
 
@@ -179,12 +197,36 @@ class MainWndProc(QtWidgets.QMainWindow):
         # 4. Сертификат
 
     def decode(self):
-        pass
-        # self.loading('---ПРОВЕРКА-АП-ВИДЕО---', 3)
-        # if self.ui.le_dec_path_input_1.text() == '' or self.ui.le_dec_path_input_2.text() == '':
-        #     QtWidgets.QMessageBox.warning(self, 'Ошибка!', 'Невозможно выполнить процесс проверки авторского права - не все файлы выбраны.', QtWidgets.QMessageBox.Ok)
-        #     self.loading('Ошибка! Нехватка данных', 2)
-        #     return 0
+        def dec_eds(path_to_video, signature):
+            RSA = ASyncEncr()
+            return RSA.verify_eds(path_to_video, signature)
+
+        def read_license(path_to_lic):
+            with open(path_to_lic) as f:
+                return yaml.load(f, Loader=SafeLoader)
+
+        def dec_stego():
+            pass
+
+        def dec_crypt():
+            pass
+
+        self.loading('---ПРОВЕРКА-АП-ВИДЕО---', 3)
+        if self.ui.le_dec_path_input_1.text() == '' or self.ui.le_dec_path_input_2.text() == '':
+            QtWidgets.QMessageBox.warning(self, 'Ошибка!',
+                                          'Невозможно выполнить процесс проверки авторского права - не все файлы выбраны.',
+                                          QtWidgets.QMessageBox.Ok)
+            self.loading('Ошибка! Нехватка данных<br/>', 2)
+            return 0
+
+        self.loading('Чтение сертификата')
+        certificate = read_license(self.ui.le_dec_path_input_2.text())
+        self.loading('Вычисление сверка ЭЦП')
+        license_status = dec_eds(self.ui.le_dec_path_input_1.text(), certificate.get('AdditionalInfo').get('EDS'))
+        license_status_msg = 'Лицензионная копия!' if license_status else 'Пиратская копия!'
+        QtWidgets.QMessageBox.warning(self, 'Заключение проверки ЭЦП', license_status_msg, QtWidgets.QMessageBox.Ok)
+        self.loading(license_status_msg, (1 if license_status else 2))
+        self.loading()
 
     def loading(self, msg='<p></p>', color=0):
         if not msg == '<p></p>':
