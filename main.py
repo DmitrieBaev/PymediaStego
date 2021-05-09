@@ -17,6 +17,7 @@ from resources.visual.ui_help import Ui_HelpWindow
 import modules.win32 as FileInfo
 from modules.aes import Encryptor as SyncEncr
 from modules.rsa import Encryptor as ASyncEncr
+from modules.stego import Steganography as Stego
 
 # Глобальные переменные
 import resources.var.globals
@@ -74,7 +75,7 @@ class MainWndProc(QtWidgets.QMainWindow):
 
     def choose_carrier_enc(self):
         fileName, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Выберите видео файл", "",
-                                                            "TEST!!! (*.txt *.png *.jpg)",
+                                                            "TEST!!! (*.txt *.png *.jpg *.*)",
                                                             options=QtWidgets.QFileDialog.Options())
         if fileName:
             self.ui.le_enc_path_input.setText(fileName)
@@ -82,7 +83,7 @@ class MainWndProc(QtWidgets.QMainWindow):
 
     def choose_carrier_dec(self):
         fileName, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Выберите видео файл", "",
-                                                            "TEST!!! (*.txt *.png *.jpg)",
+                                                            "TEST!!! (*.txt *.png *.jpg *.*)",
                                                             options=QtWidgets.QFileDialog.Options())
         if fileName:
             self.ui.le_dec_path_input_1.setText(fileName)
@@ -111,8 +112,20 @@ class MainWndProc(QtWidgets.QMainWindow):
             AES = SyncEncr(option='generate', key_data=(U_FNAME + U_SNAME + U_LNAME))
             return AES.encrypt(COPYRIGHT.encode())
 
-        def enc_stego():
-            pass
+        def enc_stego(copyright_encrypted,
+                      path=self.ui.le_enc_path_input.text()):
+            global OUTPUT_DIR, F_NAME, DEGREE, FRAME_START, FRAME_COUNT
+            s = Stego(degree=DEGREE,
+                      i=FRAME_COUNT,
+                      n=FRAME_START,
+                      enc_copyright=copyright_encrypted)
+            s.encode_video(path_in=path,
+                           path_out=OUTPUT_DIR,
+                           fname=F_NAME)
+            # print(f'Degree={DEGREE},\ni={FRAME_COUNT},\nn={FRAME_START},\nEC={copyright_encrypted}')
+            # print(f'path_in={path},')
+            # print('path_out={OUTPUT_DIR},')
+            # print('fname={F_NAME}')
 
         def enc_eds(path_to_video):
             RSA = ASyncEncr()
@@ -153,6 +166,8 @@ class MainWndProc(QtWidgets.QMainWindow):
         copyright_encrypted = enc_crypt()
         self.loading('Получение ЭЦП')
         signature = enc_eds(self.ui.le_enc_path_input.text())
+        self.loading('Стеганография видеофайла')
+        enc_stego(copyright_encrypted)
         self.loading('Конфигурация сертификата')
         create_license(copyright_encrypted, signature)
         self.loading()
@@ -271,6 +286,7 @@ class SettingsWndProc(QtWidgets.QMainWindow):
         else: self.ui.radio2.setChecked(True)
         self.ui.spin_N.setProperty("value", self.config.getint("SETTINGS", "frame_start"))
         self.ui.spin_I.setProperty("value", self.config.getint("SETTINGS", "Frame_count"))
+        self.ui.chb_inquiry.setChecked(True) if self.config.getboolean("SETTINGS", "inquiry") else self.ui.chb_inquiry.setChecked(False)
 
     def save_changes(self):
         self.config.set("SETTINGS", "output_dir", self.ui.path_output.text())
@@ -291,6 +307,7 @@ class SettingsWndProc(QtWidgets.QMainWindow):
         self.config.set("SETTINGS", "degree_value", degree_value)
         self.config.set("SETTINGS", "frame_start", self.ui.spin_N.value())
         self.config.set("SETTINGS", "frame_count", self.ui.spin_I.value())
+        self.config.set("SETTINGS", "inquiry", self.ui.chb_inquiry.isChecked())
         self.config.write(open(self.PATH_TO_CFG, "w"))
         self.close()
 
