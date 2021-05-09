@@ -119,9 +119,9 @@ class MainWndProc(QtWidgets.QMainWindow):
                       i=FRAME_COUNT,
                       n=FRAME_START,
                       enc_copyright=copyright_encrypted)
-            s.encode_video(path_in=path,
-                           path_out=OUTPUT_DIR,
-                           fname=F_NAME)
+            return s.encode_video(path_in=path,
+                                  path_out=OUTPUT_DIR,
+                                  fname=F_NAME)
             # print(f'Degree={DEGREE},\ni={FRAME_COUNT},\nn={FRAME_START},\nEC={copyright_encrypted}')
             # print(f'path_in={path},')
             # print('path_out={OUTPUT_DIR},')
@@ -131,9 +131,8 @@ class MainWndProc(QtWidgets.QMainWindow):
             RSA = ASyncEncr()
             return RSA.get_eds(path_to_video)
 
-        def create_license(copyright_encrypted, EDS):
-            global OUTPUT_DIR, \
-                F_NAME, F_OWNER, F_DATE_CREATE, F_DATE_MODIFY, \
+        def create_license(copyright_encrypted, EDS, output_dir):
+            global F_NAME, F_OWNER, F_DATE_CREATE, F_DATE_MODIFY, \
                 U_FNAME, U_SNAME, U_LNAME, U_EMAIL
             license = {'FileInfo':
                            {'FileName': F_NAME,
@@ -149,7 +148,7 @@ class MainWndProc(QtWidgets.QMainWindow):
                             'UserFathername': U_LNAME,
                             'UserEmail': U_EMAIL}}
             # открываем файл на запись
-            with open(f'{OUTPUT_DIR}/{F_NAME[:F_NAME.rindex(".")]}_license.yml', 'w') as fw:
+            with open(f'{output_dir}/{F_NAME[:F_NAME.rindex(".")]}_license.yml', 'w') as fw:
                 # сериализуем словарь `license` в формат YAML и записываем все в файл
                 yaml.dump(license, fw, sort_keys=False, default_flow_style=False)  # data = ...
 
@@ -161,17 +160,19 @@ class MainWndProc(QtWidgets.QMainWindow):
             self.loading('Ошибка! Нехватка данных<br/>', 2)
             return 0
 
-        global OUTPUT_DIR
+        global F_NAME
         self.loading('Шифрование копирайта')
         copyright_encrypted = enc_crypt()
-        self.loading('Получение ЭЦП')
-        signature = enc_eds(self.ui.le_enc_path_input.text())
         self.loading('Стеганография видеофайла')
-        enc_stego(copyright_encrypted)
+        path_to_res_dir = enc_stego(copyright_encrypted)
+        # print(f'{path_to_res_dir}/{F_NAME}')
+        # print(self.ui.le_enc_path_input.text())
+        self.loading('Получение ЭЦП')
+        signature = enc_eds(f'{path_to_res_dir}/{F_NAME}')
         self.loading('Конфигурация сертификата')
-        create_license(copyright_encrypted, signature)
+        create_license(copyright_encrypted, signature, path_to_res_dir)
         self.loading()
-        webbrowser.open(os.path.realpath(OUTPUT_DIR))  # открываем папку в проводнике
+        webbrowser.open(os.path.realpath(path_to_res_dir))  # открываем папку в проводнике
 
         # self.loading('---ЗАЩИТА-ВИДЕО-АП---', 3)
         # if self.ui.le_enc_path_input.text() == '':

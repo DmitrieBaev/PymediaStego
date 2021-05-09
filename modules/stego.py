@@ -62,11 +62,13 @@ class Steganography:
 
         fname_rpart = fname[fname.rfind('.'):]
         fname_lpart = fname[:fname.rfind('.')]
-        out = cv2.VideoWriter(f'{path_out}/{fname_lpart}_out{fname_rpart}', self.fourcc(fname_rpart), fps, size)
+        os.mkdir(f'{path_out}/{fname_lpart}')
+        out = cv2.VideoWriter(f'{path_out}/{fname_lpart}/{fname}', self.fourcc(fname_rpart), fps, size)
         for i in range(len(self.FRAME_ARRAY)):
             out.write(self.FRAME_ARRAY[i])
         out.release()
         cv2.destroyAllWindows()
+        return f'{path_out}/{fname_lpart}'
         # compile audio
 
     def encode_image(self, text, image_in_path):
