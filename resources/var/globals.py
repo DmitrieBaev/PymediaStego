@@ -3,6 +3,7 @@ DEGREE = -1  # Количество младших бит, отдаваемых 
 FRAME_START = -1  # SPIN_N
 FRAME_COUNT = -1  # SPIN_I
 OUTPUT_DIR = ''  # Выходной каталог
+FAST_DEC = False
 
 COPYRIGHT = ''
 

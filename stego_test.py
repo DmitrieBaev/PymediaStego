@@ -251,5 +251,19 @@ def encode_test(_CE):
                    fname='clip.mp4')
 
 
+def logging():
+    import logging
+
+    # add filemode="w" to overwrite
+    # logging.basicConfig(filename="resources/sample.log", level=logging.INFO)
+    # logging.debug("This is a debug message")
+    # logging.info("Informational message")
+    # logging.error("An error has happened!")
+
+    logger = logging.getLogger("resources/sample.log")
+    logger.info('Info')
+    logger.error('Error')
+
+
 if __name__ == '__main__':
-    encode_test(f'D=4;I=1;N=50;L=...;'.encode())
+    logging()

@@ -12,7 +12,6 @@ from yaml.loader import SafeLoader
 # Локальные модули
 from resources.visual.ui_main import Ui_MainWindow
 from resources.visual.ui_settings import Ui_SettingsWindow
-#from inputdlg import Ui_InDialogWindow
 from resources.visual.ui_help import Ui_HelpWindow
 import modules.win32 as FileInfo
 from modules.aes import Encryptor as SyncEncr
@@ -37,24 +36,14 @@ class MainWndProc(QtWidgets.QMainWindow):
         self.ui.btn_enc_choose.clicked.connect(self.choose_carrier_enc)
         self.ui.btn_enc.clicked.connect(self.encode)
         self.ui.btn_dec.clicked.connect(self.decode)
-        self.ui.btn_show_log.clicked.connect(self.show_hide_changelog)
         self.ui.btn_dec_choose_1.clicked.connect(self.choose_carrier_dec)
         self.ui.btn_dec_choose_2.clicked.connect(self.choose_license)
-
-    def show_hide_changelog(self):
-        if not self.statement:
-            self.statement = True
-            self.ui.btn_show_log.setIcon(self.ui.icon_hide)
-            self.ui.resizeUi(self)
-        else:
-            self.statement = False
-            self.ui.btn_show_log.setIcon(self.ui.icon_show)
-            self.ui.resizeUi(self, Height=285)
 
     @staticmethod
     def load_properties():
         global DEGREE, FRAME_START, FRAME_COUNT, OUTPUT_DIR, \
-            U_FNAME, U_SNAME, U_LNAME, U_EMAIL
+            U_FNAME, U_SNAME, U_LNAME, U_EMAIL, \
+            FAST_DEC
         config = configparser.RawConfigParser()
         config.read('resources/var/config.ini')
         DEGREE = config.getint("SETTINGS", "degree_value")
@@ -65,6 +54,7 @@ class MainWndProc(QtWidgets.QMainWindow):
         U_SNAME = config.get("LICENSE", "user_second_name")
         U_LNAME = config.get("LICENSE", "user_last_name")
         U_EMAIL = config.get("LICENSE", "user_email")
+        FAST_DEC = config.getboolean("SETTINGS", "inquiry")
 
 
     def show_settings(self):
@@ -75,7 +65,7 @@ class MainWndProc(QtWidgets.QMainWindow):
 
     def choose_carrier_enc(self):
         fileName, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Выберите видео файл", "",
-                                                            "TEST!!! (*.txt *.png *.jpg *.*)",
+                                                            "Видео файл (*.mp4 *.avi)",
                                                             options=QtWidgets.QFileDialog.Options())
         if fileName:
             self.ui.le_enc_path_input.setText(fileName)
@@ -83,7 +73,7 @@ class MainWndProc(QtWidgets.QMainWindow):
 
     def choose_carrier_dec(self):
         fileName, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Выберите видео файл", "",
-                                                            "TEST!!! (*.txt *.png *.jpg *.*)",
+                                                            "Видео файл (*.mp4 *.avi)",
                                                             options=QtWidgets.QFileDialog.Options())
         if fileName:
             self.ui.le_dec_path_input_1.setText(fileName)
@@ -102,7 +92,6 @@ class MainWndProc(QtWidgets.QMainWindow):
         F_DATE_MODIFY = time.strftime("%d.%m.%Y %H:%M", time.localtime(os.path.getmtime(path)))
         F_OWNER = FileInfo.get_file_info(path, 'short')
         F_NAME = os.path.basename(path)
-
         COPYRIGHT = f'Copyright: © {F_NAME},\n{F_DATE_CREATE}, {F_OWNER}\nAll Rights Reserved.'
         return COPYRIGHT
 
@@ -112,8 +101,7 @@ class MainWndProc(QtWidgets.QMainWindow):
             AES = SyncEncr(option='generate', key_data=(U_FNAME + U_SNAME + U_LNAME))
             return AES.encrypt(COPYRIGHT.encode())
 
-        def enc_stego(copyright_encrypted,
-                      path=self.ui.le_enc_path_input.text()):
+        def enc_stego(copyright_encrypted, path=self.ui.le_enc_path_input.text()):
             global OUTPUT_DIR, F_NAME, DEGREE, FRAME_START, FRAME_COUNT
             s = Stego(degree=DEGREE,
                       i=FRAME_COUNT,
@@ -122,10 +110,6 @@ class MainWndProc(QtWidgets.QMainWindow):
             return s.encode_video(path_in=path,
                                   path_out=OUTPUT_DIR,
                                   fname=F_NAME)
-            # print(f'Degree={DEGREE},\ni={FRAME_COUNT},\nn={FRAME_START},\nEC={copyright_encrypted}')
-            # print(f'path_in={path},')
-            # print('path_out={OUTPUT_DIR},')
-            # print('fname={F_NAME}')
 
         def enc_eds(path_to_video):
             RSA = ASyncEncr()
@@ -152,65 +136,19 @@ class MainWndProc(QtWidgets.QMainWindow):
                 # сериализуем словарь `license` в формат YAML и записываем все в файл
                 yaml.dump(license, fw, sort_keys=False, default_flow_style=False)  # data = ...
 
-        self.loading('---ЗАЩИТА-ВИДЕО-АП---', 3)
         if self.ui.le_enc_path_input.text() == '':
             QtWidgets.QMessageBox.warning(self, 'Ошибка!',
                                           'Невозможно выполнить процесс защиты файла авторским правом - не выбран видео файл',
                                           QtWidgets.QMessageBox.Ok)
-            self.loading('Ошибка! Нехватка данных<br/>', 2)
             return 0
 
+        self.load_properties()
         global F_NAME
-        self.loading('Шифрование копирайта')
         copyright_encrypted = enc_crypt()
-        self.loading('Стеганография видеофайла')
         path_to_res_dir = enc_stego(copyright_encrypted)
-        # print(f'{path_to_res_dir}/{F_NAME}')
-        # print(self.ui.le_enc_path_input.text())
-        self.loading('Получение ЭЦП')
         signature = enc_eds(f'{path_to_res_dir}/{F_NAME}')
-        self.loading('Конфигурация сертификата')
         create_license(copyright_encrypted, signature, path_to_res_dir)
-        self.loading()
         webbrowser.open(os.path.realpath(path_to_res_dir))  # открываем папку в проводнике
-
-        # self.loading('---ЗАЩИТА-ВИДЕО-АП---', 3)
-        # if self.ui.le_enc_path_input.text() == '':
-        #     QtWidgets.QMessageBox.warning(self, 'Ошибка!', 'Невозможно выполнить процесс защиты файла авторским правом - не выбран видео файл', QtWidgets.QMessageBox.Ok)
-        #     self.loading('Ошибка! Нехватка данных<br/>', 2)
-        #     return 0
-        # global OUTPUT_DIR, F_NAME, COPYRIGHT, F_DATE_CREATE
-        # self.loading('Шифрование копирайта')
-        # # Ключ симметричного алгоритма шифрования
-        # key = b""  # 16 байт - длина ключа в байтах
-        # copyright_byte = COPYRIGHT.encode()
-        # AES = SyncEncr(option='generate')
-        # copyright_encrypted = AES.encrypt(copyright_byte)
-        # copyright_decrypted = AES.decrypt(copyright_encrypted)
-        # open(os.path.realpath(f'{OUTPUT_DIR}/tmp/{NAME}.AES.enc'), 'wb').write(copyright_encrypted)
-        # open(os.path.realpath(f'{OUTPUT_DIR}/tmp/{NAME}.AES.dec'), 'wb').write(copyright_decrypted)
-        #
-        # self.loading('Получение ЭЦП')
-        # RSA = ASyncEncr()
-        # signature = RSA.encrypt(self.ui.le_enc_path_input.text())
-        # correct = RSA.decrypt(self.ui.le_enc_path_input.text(), signature)
-        # self.loading('Лицензионная копия!', 1) if correct else self.loading('Пиратская копия!', 2)
-        #
-        # self.loading('Сохранение ключей ЭЦП')
-        #
-        # self.loading('Подготавка видео файла')
-        #
-        # self.loading('Выполнение процесса стеганографии')
-        #
-        # self.loading()
-        # webbrowser.open(os.path.realpath(OUTPUT_DIR))  # открываем папку в проводнике
-        # os.system(f'start {os.path.realpath(self.ui.tb_out_folder.text())}')  # альтернатива
-        #
-        # Правильная последовательность:
-        # 1. Шифрование копирайта
-        # 2. Стеганография
-        # 3. ЭЦП
-        # 4. Сертификат
 
     def decode(self):
         def dec_eds(path_to_video, signature):
@@ -221,35 +159,23 @@ class MainWndProc(QtWidgets.QMainWindow):
             with open(path_to_lic) as f:
                 return yaml.load(f, Loader=SafeLoader)
 
-        def dec_stego():
-            pass
-
-        def dec_crypt():
-            pass
-
-        self.loading('---ПРОВЕРКА-АП-ВИДЕО---', 3)
         if self.ui.le_dec_path_input_1.text() == '' or self.ui.le_dec_path_input_2.text() == '':
             QtWidgets.QMessageBox.warning(self, 'Ошибка!',
                                           'Невозможно выполнить процесс проверки авторского права - не все файлы выбраны.',
                                           QtWidgets.QMessageBox.Ok)
-            self.loading('Ошибка! Нехватка данных<br/>', 2)
             return 0
 
-        self.loading('Чтение сертификата')
-        certificate = read_license(self.ui.le_dec_path_input_2.text())
-        self.loading('Вычисление сверка ЭЦП')
-        license_status = dec_eds(self.ui.le_dec_path_input_1.text(), certificate.get('AdditionalInfo').get('EDS'))
-        license_status_msg = 'Лицензионная копия!' if license_status else 'Пиратская копия!'
-        QtWidgets.QMessageBox.warning(self, 'Заключение проверки ЭЦП', license_status_msg, QtWidgets.QMessageBox.Ok)
-        self.loading(license_status_msg, (1 if license_status else 2))
-        self.loading()
-
-    def loading(self, msg='<p></p>', color=0):
-        if not msg == '<p></p>':
-            colors = ['rgb(250, 250, 250)', 'rgb(55, 250, 55)', 'rgb(250, 55, 55)', 'rgb(55, 55, 250)']
-            self.ui.pte_change_log.appendHtml(f'<p style="color:{colors[color]}">[{time.strftime("%d.%m.%Y %H:%M:%S", time.localtime())}]   {msg}</p>')
+        self.load_properties()
+        global FAST_DEC
+        if not FAST_DEC:
+            certificate = read_license(self.ui.le_dec_path_input_2.text())
+            license_status = dec_eds(self.ui.le_dec_path_input_1.text(), certificate.get('AdditionalInfo').get('EDS'))
+            license_status_msg = 'Лицензионная копия!' if license_status else 'Пиратская копия!'
+            QtWidgets.QMessageBox.warning(self, 'Заключение проверки ЭЦП', license_status_msg, QtWidgets.QMessageBox.Ok)
         else:
-            self.ui.pte_change_log.appendHtml('<p></p>')
+            QtWidgets.QMessageBox.warning(self, 'Внимание!',
+                                          'Ограничение на использование программного продукта.',
+                                          QtWidgets.QMessageBox.Ok)
 
 
 class HelpWndProc(QtWidgets.QMainWindow):
@@ -319,20 +245,6 @@ class SettingsWndProc(QtWidgets.QMainWindow):
         dirName = QtWidgets.QFileDialog.getExistingDirectory(self, "Укажите папку для сохранения результата")
         if dirName:
             self.ui.path_output.setText(dirName)
-
-
-# class InputDialogProc(QtWidgets.QMainWindow):
-#     def __init__(self):
-#         # Подключение окна
-#         super(InputDialogProc, self).__init__()  # Наследуем инициализацию окна от прородителя QtWidgets
-#         self.ui = Ui_InDialogWindow()  # Создаем объект класса, описывающего интерфейс
-#         self.ui.setupUi(self)  # Позиционируем все элементы интерфейса
-#         self.show()
-#         # Обработчики кнопок
-#         self.ui.btn_OK.clicked.connect(self.save_changes)
-#
-#     def save_changes(self):
-#         self.close()
 
 
 if __name__ == '__main__':
