@@ -1,0 +1,7 @@
+/.idea/modules.xml
+/.idea/.gitignore
+/.idea/inspectionProfiles/profiles_settings.xml
+/.idea/PymediaStego.iml
+/.idea/vcs.xml
+/modules/system.py
+/resources/visual/ui_input_dlg.py
