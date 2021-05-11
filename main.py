@@ -1,6 +1,3 @@
-# Конвертация .ui в .py
-# python -m PyQt5.uic.pyuic -x ui\diploma.ui -o ui\frame.py
-
 # Системные библиотеки
 import configparser, sys, os, webbrowser, time
 
