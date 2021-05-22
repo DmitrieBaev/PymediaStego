@@ -4,10 +4,8 @@ from Crypto.Cipher import AES
 
 
 class Encryptor:
-    def __init__(self,
-                 default_key='2yDynDCk5Njsvq2m'.encode(),
-                 option='use_default',
-                 key_data=''):
+    def __init__(self, option='use_default', key_data=''):
+        default_key = '2yDynDCk5Njsvq2m'.encode()
         if option == 'use_default':
             self.key = default_key
         elif option == 'generate':

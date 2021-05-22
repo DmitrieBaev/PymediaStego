@@ -25,7 +25,6 @@ class MainWndProc(QtWidgets.QMainWindow):
         super(MainWndProc, self).__init__()  # Наследуем инициализацию окна от прородителя QtWidgets
         self.ui = Ui_MainWindow()  # Создаем объект класса, описывающего интерфейс
         self.ui.setupUi(self)  # Позиционируем все элементы интерфейса
-        self.statement = False
         self.load_properties()
         # Обработчики кнопок
         self.ui.btn_show_settings.clicked.connect(self.show_settings)
@@ -40,7 +39,7 @@ class MainWndProc(QtWidgets.QMainWindow):
     def load_properties():
         global DEGREE, FRAME_START, FRAME_COUNT, OUTPUT_DIR, \
             U_FNAME, U_SNAME, U_LNAME, U_EMAIL, \
-            FAST_DEC
+            GLOBAL_DECODING
         config = configparser.RawConfigParser()
         config.read('resources/var/config.ini')
         DEGREE = config.getint("SETTINGS", "degree_value")
@@ -51,7 +50,7 @@ class MainWndProc(QtWidgets.QMainWindow):
         U_SNAME = config.get("LICENSE", "user_second_name")
         U_LNAME = config.get("LICENSE", "user_last_name")
         U_EMAIL = config.get("LICENSE", "user_email")
-        FAST_DEC = config.getboolean("SETTINGS", "inquiry")
+        GLOBAL_DECODING = config.getboolean("SETTINGS", "inquiry")
 
 
     def show_settings(self):
@@ -112,7 +111,11 @@ class MainWndProc(QtWidgets.QMainWindow):
             RSA = ASyncEncr()
             return RSA.get_eds(path_to_video)
 
-        def create_license(copyright_encrypted, EDS, output_dir):
+        def generate_props_key(copyright_encrypted):
+            global DEGREE, FRAME_START, FRAME_COUNT
+            return f'{DEGREE};{FRAME_COUNT};{FRAME_START}'.encode()
+
+        def create_license(copyright_encrypted, EDS, output_dir, props_key):
             global F_NAME, F_OWNER, F_DATE_CREATE, F_DATE_MODIFY, \
                 U_FNAME, U_SNAME, U_LNAME, U_EMAIL
             license = {'FileInfo':
@@ -122,7 +125,8 @@ class MainWndProc(QtWidgets.QMainWindow):
                             'FileOwner': F_OWNER},
                        'AdditionalInfo':
                            {'EDS': EDS,
-                            'Copyright': copyright_encrypted},
+                            'Copyright': copyright_encrypted,
+                            'Key': props_key},
                        'UserInfo':
                            {'UserName': U_FNAME,
                             'UserSurname': U_SNAME,
@@ -140,20 +144,20 @@ class MainWndProc(QtWidgets.QMainWindow):
             return 0
 
         self.load_properties()
-        global F_NAME
+        global F_NAME, OUTPUT_DIR
         copyright_encrypted = enc_crypt()
-        path_to_res_dir = enc_stego(copyright_encrypted)
-        signature = enc_eds(f'{path_to_res_dir}/{F_NAME}')
-        create_license(copyright_encrypted, signature, path_to_res_dir)
-        webbrowser.open(os.path.realpath(path_to_res_dir))  # открываем папку в проводнике
+        enc_stego(copyright_encrypted)
+        signature = enc_eds(f'{OUTPUT_DIR}/{F_NAME}')
+        create_license(copyright_encrypted, signature, OUTPUT_DIR, generate_props_key(copyright_encrypted))
+        webbrowser.open(os.path.realpath(OUTPUT_DIR))  # открываем папку в проводнике
 
     def decode(self):
-        def dec_eds(path_to_video, signature):
+        def dec_eds(signature, path=self.ui.le_dec_path_input_1.text()):
             RSA = ASyncEncr()
-            return RSA.verify_eds(path_to_video, signature)
+            return RSA.verify_eds(path, signature)
 
-        def read_license(path_to_lic):
-            with open(path_to_lic) as f:
+        def read_license(path=self.ui.le_dec_path_input_2.text()):
+            with open(path) as f:
                 return yaml.load(f, Loader=SafeLoader)
 
         if self.ui.le_dec_path_input_1.text() == '' or self.ui.le_dec_path_input_2.text() == '':
@@ -163,16 +167,23 @@ class MainWndProc(QtWidgets.QMainWindow):
             return 0
 
         self.load_properties()
-        global FAST_DEC
-        if not FAST_DEC:
-            certificate = read_license(self.ui.le_dec_path_input_2.text())
-            license_status = dec_eds(self.ui.le_dec_path_input_1.text(), certificate.get('AdditionalInfo').get('EDS'))
+        global GLOBAL_DECODING
+        certificate = read_license()
+        if not GLOBAL_DECODING:
+            license_status = dec_eds(certificate.get('AdditionalInfo').get('EDS'))
             license_status_msg = 'Лицензионная копия!' if license_status else 'Пиратская копия!'
             QtWidgets.QMessageBox.warning(self, 'Заключение проверки ЭЦП', license_status_msg, QtWidgets.QMessageBox.Ok)
         else:
-            QtWidgets.QMessageBox.warning(self, 'Внимание!',
-                                          'Ограничение на использование программного продукта.',
-                                          QtWidgets.QMessageBox.Ok)
+            license_status = dec_eds(certificate.get('AdditionalInfo').get('EDS'))
+            report = f'Электронно цифровая подпись видеофайла {"" if license_status else "не "}совпала со значением в сертификате.\n'
+            properties = certificate.get('AdditionalInfo').get('Key')
+            properties = properties.decode().split(';')
+            s = Stego(degree=int(properties[0]),
+                      i=int(properties[1]),
+                      n=int(properties[2]),
+                      enc_copyright=certificate.get('AdditionalInfo').get('Copyright'))
+            report += f'Копирайт {"" if not s.decode_video(path_in=self.ui.le_dec_path_input_1.text()) else "не "}аутентичен. Целостность видеофайла не нарушена.'
+            QtWidgets.QMessageBox.warning(self, 'Заключение глубокой проверки', report, QtWidgets.QMessageBox.Ok)
 
 
 class HelpWndProc(QtWidgets.QMainWindow):
@@ -203,7 +214,7 @@ class SettingsWndProc(QtWidgets.QMainWindow):
     def load_properties(self):
         self.ui.path_output.setText(self.config.get("SETTINGS", "output_dir"))
         degree_name = self.config.get("SETTINGS", "degree_name")
-        if degree_name == "Worth":  self.ui.radio1.setChecked(True)
+        if degree_name == "Worst":  self.ui.radio1.setChecked(True)
         elif degree_name == "Low":  self.ui.radio2.setChecked(True)
         elif degree_name == "Mid":  self.ui.radio3.setChecked(True)
         elif degree_name == "High": self.ui.radio4.setChecked(True)
@@ -216,7 +227,7 @@ class SettingsWndProc(QtWidgets.QMainWindow):
         self.config.set("SETTINGS", "output_dir", self.ui.path_output.text())
         degree_name, degree_value = "Low", 4
         if self.ui.radio1.isChecked():
-            degree_name = "Worth"
+            degree_name = "Worst"
             degree_value = 8
         if self.ui.radio2.isChecked():
             degree_name = "Low"
