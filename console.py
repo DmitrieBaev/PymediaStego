@@ -184,10 +184,31 @@ def get_masks(degree=8):
 #     return f'Копирайт {"" if s.decode_video(path_in=path) else "не "}аутентичен. Целостность видеофайла не пострадала.'
 
 
+def get_hash():
+    from modules.rsa import Encryptor as ASyncEncr
+    class_obj = ASyncEncr()
+    SHA256Hash_format = class_obj.get_hash(r'data\vid\good_job.divx.avi')
+    return class_obj.get_eds(r'data\vid\good_job.divx.avi')
+
+
+def get_encr_text():
+    from modules.aes import Encryptor as SyncEncr
+    class_obj = SyncEncr()
+    txt = 'Copyright by okeyw.\nAll Rights Reserved.'.encode()
+    _txt = class_obj.encrypt(txt)
+    txt_ = class_obj.decrypt(_txt)
+    return _txt, txt_, True if txt == txt_ else False
+
+
 if __name__ == "__main__":
-    encode_image()
-    status = decode_image()
-    print(status)
+    prt1, prt2, _ = get_encr_text()
+    print(f'{prt1}\n{prt2}\n{_}')
+
+    # print(get_hash())
+
+    # encode_image()
+    # status = decode_image()
+    # print(status)
 
     #file_name = os.path.basename(r'data\vid\good_job.divx.avi')
     # recode()

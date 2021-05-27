@@ -3,6 +3,7 @@ import configparser, sys, os, webbrowser, time
 
 # Сторонние библиотеки
 from PyQt5 import QtWidgets  # pip install pyqt5
+from PyQt5.QtCore import QThread
 import yaml  # pip install pyyaml
 from yaml.loader import SafeLoader
 
@@ -17,6 +18,24 @@ from modules.stego import Steganography as Stego
 
 # Глобальные переменные
 import resources.var.globals
+_STATE = False
+
+
+class LoadingThread(QThread):
+    def __init__(self, QWindow, parent=None):
+        super(LoadingThread, self).__init__(parent=parent)
+        self.QWindow = QWindow
+
+    def run(self):
+        while _STATE:
+            self.QWindow.btn_enc.setText('Подождите')
+            time.sleep(0.25)
+            self.QWindow.btn_enc.setText('Подождите.')
+            time.sleep(0.25)
+            self.QWindow.btn_enc.setText('Подождите..')
+            time.sleep(0.25)
+            self.QWindow.btn_enc.setText('Подождите...')
+            time.sleep(0.25)
 
 
 class MainWndProc(QtWidgets.QMainWindow):
@@ -34,6 +53,7 @@ class MainWndProc(QtWidgets.QMainWindow):
         self.ui.btn_dec.clicked.connect(self.decode)
         self.ui.btn_dec_choose_1.clicked.connect(self.choose_carrier_dec)
         self.ui.btn_dec_choose_2.clicked.connect(self.choose_license)
+        self.LoadingThread_instance = LoadingThread(QWindow=self)
 
     @staticmethod
     def load_properties():
@@ -143,12 +163,15 @@ class MainWndProc(QtWidgets.QMainWindow):
                                           QtWidgets.QMessageBox.Ok)
             return 0
 
+        _STATE = True
+        self.LoadingThread_instance.start()
         self.load_properties()
         global F_NAME, OUTPUT_DIR
         copyright_encrypted = enc_crypt()
         enc_stego(copyright_encrypted)
         signature = enc_eds(f'{OUTPUT_DIR}/{F_NAME}')
         create_license(copyright_encrypted, signature, OUTPUT_DIR, generate_props_key(copyright_encrypted))
+        _STATE = False
         webbrowser.open(os.path.realpath(OUTPUT_DIR))  # открываем папку в проводнике
 
     def decode(self):
